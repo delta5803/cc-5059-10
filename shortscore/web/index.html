@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>短配乐结构生成器 · 编曲试听界面</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+  <h1>短配乐结构生成器</h1>
+  <div class="sub">引子 · 发展 · 回归 · 收束 — 结构可拖动，时长/强调由真实运算核验</div>
+</header>
+
+<main>
+  <section class="panel" id="editor">
+    <h2>1. 规格与结构编辑</h2>
+    <div class="row">
+      <label>样例
+        <select id="preset"></select>
+      </label>
+      <label>标题 <input id="title" type="text" style="width:16rem"></label>
+    </div>
+    <div class="row">
+      <label>目标时长(秒) <input id="target_sec" type="number" step="0.5" min="5"></label>
+      <label>乐句长度(小节) <input id="phrase_bars" type="number" min="1" max="8"></label>
+      <label>尾音策略
+        <select id="tail_policy">
+          <option value="include_release">计入尾音释放（交付含 release）</option>
+          <option value="exclude_release">不计尾音（交付到最后发声）</option>
+        </select>
+      </label>
+      <label>释放(秒) <input id="release_sec" type="number" step="0.05" min="0.05"></label>
+    </div>
+    <div class="row">
+      <label>速度缩放下限 <input id="tempo_lo" type="number" step="0.05"></label>
+      <label>速度缩放上界 <input id="tempo_hi" type="number" step="0.05"></label>
+      <label>对齐策略
+        <select id="strategy">
+          <option value="tempo_map">改速度图（结构固定）</option>
+          <option value="section_replace">替换乐段（名义速度）</option>
+        </select>
+      </label>
+      <label class="chk"><input id="ritardando" type="checkbox" checked> 末段渐慢</label>
+    </div>
+
+    <h3>段落（拖动排序；± 调整小节数；0 = 省略）</h3>
+    <ul id="section_list" class="section-list"></ul>
+    <p class="hint">顺序固定为 引子→发展→回归→收束；仅允许在允许范围内调整各段小节数与省略引子/收束，
+      发展与回归不可省略。</p>
+
+    <h3>强调时点（容差单位：秒）</h3>
+    <table id="emph_table" class="emph">
+      <thead><tr><th>标签</th><th>绑定事件 role</th><th>目标秒</th><th>容差±</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <button id="add_emph" type="button">+ 加强调节点</button>
+
+    <h3>主题复现约束（次数区间）</h3>
+    <div class="row">
+      <label>A 最少 <input id="recA_lo" type="number" min="0"></label>
+      <label>A 最多 <input id="recA_hi" type="number" min="0"></label>
+      <label>B 最少 <input id="recB_lo" type="number" min="0"></label>
+      <label>B 最多 <input id="recB_hi" type="number" min="0"></label>
+    </div>
+
+    <details><summary>原始规格 JSON（高级）</summary>
+      <textarea id="raw_json" spellcheck="false"></textarea>
+      <button id="apply_json" type="button">应用 JSON</button>
+    </details>
+
+    <div class="row actions">
+      <button id="btn_plan" class="primary" type="button">重新运算曲式</button>
+      <button id="btn_compare" type="button">比较：改速度 vs 换乐段</button>
+      <button id="btn_export" type="button">导出 MusicXML/JSON</button>
+    </div>
+    <div id="errors" class="errors" hidden></div>
+  </section>
+
+  <section class="panel" id="result">
+    <h2>2. 曲式布局与完整播放（实际运算结果）</h2>
+    <div id="metrics" class="metrics"></div>
+    <div id="timeline_wrap">
+      <div id="timeline"></div>
+      <div id="emphasis_layer"></div>
+      <div id="playhead"></div>
+    </div>
+    <div id="legend" class="legend"></div>
+    <div class="row player">
+      <button id="btn_play" type="button">▶ 完整播放</button>
+      <button id="btn_stop" type="button">■ 停止</button>
+      <span id="clock">0.00 / 0.00 s</span>
+    </div>
+    <h3>速度曲线（小节/BPM）</h3>
+    <svg id="tempo_svg" viewBox="0 0 720 160" preserveAspectRatio="none"></svg>
+    <h3>强调落点与真实音频核验</h3>
+    <table id="verify_table" class="emph"><tbody></tbody></table>
+    <h3>候选结构排序（前 8）</h3>
+    <table id="cand_table" class="emph"><tbody></tbody></table>
+    <div id="compare_box" hidden>
+      <h3>策略对比</h3>
+      <pre id="compare_out"></pre>
+    </div>
+    <div id="export_box" hidden>
+      <h3>导出</h3>
+      <a id="dl_xml" download="score.musicxml">下载 MusicXML 谱面</a>
+      <pre id="export_meta"></pre>
+    </div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

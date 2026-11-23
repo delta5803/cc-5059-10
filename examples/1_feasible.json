@@ -1,0 +1,21 @@
+{
+  "title": "样例1-可行：45秒品牌短配乐（19小节，非整除）",
+  "target_sec": 45.0,
+  "phrase_bars": 4,
+  "tail_policy": "include_release",
+  "release_sec": 0.45,
+  "tempo_limits": [0.75, 1.35],
+  "bar_ranges": {
+    "intro": [0, 1, 2, 4],
+    "development": [4, 6, 8],
+    "recap": [4, 6, 8],
+    "coda": [0, 2, 3, 4]
+  },
+  "emphases": [
+    {"time": 0.0,  "role": "section_start:intro", "tolerance": 0.6, "label": "开场入画"},
+    {"time": 17.0, "role": "climax",              "tolerance": 0.9, "label": "产品高光"},
+    {"time": 21.5, "role": "theme_return",        "tolerance": 0.9, "label": "品牌主题回归"},
+    {"time": 36.0, "role": "section_start:coda",  "tolerance": 1.0, "label": "收束入尾板"}
+  ],
+  "recurrence": {"A": [2, 4], "B": [1, 2]}
+}

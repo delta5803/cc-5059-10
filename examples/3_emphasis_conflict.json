@@ -1,0 +1,20 @@
+{
+  "title": "样例3-无法同时满足：两个强调节点间距小于事件最小可达间距",
+  "target_sec": 30.0,
+  "phrase_bars": 4,
+  "tail_policy": "include_release",
+  "release_sec": 0.45,
+  "tempo_limits": [0.80, 1.30],
+  "bar_ranges": {
+    "intro": [0],
+    "development": [4, 6],
+    "recap": [4, 6],
+    "coda": [0, 2, 3]
+  },
+  "emphases": [
+    {"time": 5.0,  "role": "climax",       "tolerance": 0.6, "label": "卡点A（高潮）"},
+    {"time": 6.6,  "role": "theme_return", "tolerance": 0.6, "label": "卡点B（要求紧跟A仅1.6秒）"},
+    {"time": 23.0, "role": "section_start:coda", "tolerance": 1.2, "label": "尾板"}
+  ],
+  "recurrence": {"A": [1, 4], "B": [1, 2]}
+}

@@ -1,0 +1,81 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  background: #14181f; color: #e6ebf2;
+}
+header { padding: 18px 26px 10px; border-bottom: 1px solid #2a3340; }
+header h1 { margin: 0; font-size: 20px; }
+.sub { color: #8fa0b3; font-size: 13px; margin-top: 4px; }
+main { display: grid; grid-template-columns: 380px 1fr; gap: 16px; padding: 16px 22px; }
+.panel {
+  background: #1b212b; border: 1px solid #2a3340; border-radius: 10px;
+  padding: 16px; min-width: 0;
+}
+h2 { font-size: 15px; margin: 0 0 12px; }
+h3 { font-size: 13px; margin: 16px 0 8px; color: #b7c4d2; }
+label { display: inline-flex; flex-direction: column; font-size: 12px; color: #9fb0c0; gap: 3px; }
+label.chk { flex-direction: row; align-items: center; gap: 6px; }
+input, select, textarea, button {
+  background: #11161d; color: #e6ebf2; border: 1px solid #33404f; border-radius: 6px;
+  padding: 6px 8px; font-size: 12px;
+}
+textarea { width: 100%; height: 180px; font-family: ui-monospace, monospace; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.row.actions { margin-top: 14px; }
+button { cursor: pointer; }
+button.primary { background: #2f6fed; border-color: #2f6fed; font-weight: 600; }
+button:hover { border-color: #5b7ba6; }
+.hint { font-size: 11px; color: #7d8ea0; line-height: 1.5; }
+
+.section-list { list-style: none; padding: 0; margin: 0 0 6px; }
+.section-list li {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px;
+  background: #11161d; border: 1px solid #33404f; border-radius: 8px; cursor: grab;
+}
+.section-list li.dragging { opacity: .45; }
+.section-list li .name { flex: 1; font-size: 13px; }
+.section-list li button { padding: 2px 9px; }
+.swatch { width: 12px; height: 26px; border-radius: 3px; }
+
+.emph { width: 100%; border-collapse: collapse; font-size: 12px; }
+.emph th, .emph td { border: 1px solid #2a3340; padding: 5px 7px; text-align: left; }
+.emph input { width: 100%; padding: 3px 5px; }
+.ok { color: #5fd38d; } .bad { color: #ff7a7a; }
+
+.errors {
+  background: #3a1d22; border: 1px solid #8a3540; color: #ffc7c7;
+  border-radius: 8px; padding: 10px 12px; font-size: 12px; margin-top: 10px;
+}
+.errors ul { margin: 6px 0 0; padding-left: 18px; }
+
+.metrics { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; margin-bottom: 12px; }
+.metrics b { display: block; font-size: 16px; color: #fff; margin-top: 2px; }
+#timeline_wrap {
+  position: relative; height: 118px; background: #11161d;
+  border: 1px solid #2a3340; border-radius: 8px; overflow: hidden;
+}
+#timeline, #emphasis_layer, #playhead { position: absolute; left: 0; right: 0; }
+#timeline { top: 10px; height: 64px; }
+.block {
+  position: absolute; top: 0; height: 64px; border-radius: 6px; padding: 6px 8px;
+  font-size: 11px; color: #fff; overflow: hidden; border: 1px solid rgba(255,255,255,.25);
+}
+.block .bars { font-size: 15px; font-weight: 700; }
+#emphasis_layer { top: 82px; height: 26px; }
+.emph-mark {
+  position: absolute; top: 0; font-size: 10px; transform: translateX(-50%);
+  white-space: nowrap; padding: 2px 6px; border-radius: 10px;
+}
+.emph-mark.ok { background: #173d2a; color: #8fe6b6; border: 1px solid #2f7a55; }
+.emph-mark.bad { background: #3d1b21; color: #ff9d9d; border: 1px solid #8a3540; }
+#playhead { top: 6px; bottom: 6px; width: 2px; background: #ffd166; display: none; z-index: 5; }
+.legend { display: flex; gap: 12px; font-size: 11px; margin: 8px 0; color: #9fb0c0; flex-wrap: wrap; }
+.legend span i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+.player { align-items: center; margin-top: 12px; }
+#clock { font-family: ui-monospace, monospace; color: #b7c4d2; }
+svg { width: 100%; height: 160px; background: #11161d; border-radius: 8px; }
+pre {
+  background: #11161d; border: 1px solid #2a3340; border-radius: 8px; padding: 10px;
+  font-size: 11px; overflow: auto; max-height: 320px; white-space: pre-wrap;
+}
+a { color: #7db4ff; }
