@@ -62,7 +62,8 @@ function renderSectionList() {
     const choices = state.bar_ranges[kind];
     const cur = state._bars[kind];
     const li = document.createElement("li");
-    li.draggable = meta.removable;
+    // 全部段落可拖动：拖动用于在固定顺序内重分配小节配置（不改变段落顺序）
+    li.draggable = true;
     li.dataset.kind = kind;
     li.innerHTML =
       `<span class="swatch" style="background:${meta.color}"></span>` +
@@ -76,13 +77,17 @@ function renderSectionList() {
     li.addEventListener("dragstart", (e) => {
       li.classList.add("dragging");
       e.dataTransfer.setData("text/plain", kind);
+      e.dataTransfer.effectAllowed = "move";
     });
     li.addEventListener("dragend", () => li.classList.remove("dragging"));
-    li.addEventListener("dragover", (e) => e.preventDefault());
+    li.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
     li.addEventListener("drop", (e) => {
       e.preventDefault();
       const dragged = e.dataTransfer.getData("text/plain");
-      if (SECTION_META[dragged]?.removable) swapSectionBars(dragged, kind);
+      if (dragged && dragged !== kind) dragSectionBars(dragged, kind);
     });
     ul.appendChild(li);
   }
@@ -93,16 +98,27 @@ function changeBars(kind, delta) {
   const cur = state._bars[kind];
   const idx = choices.indexOf(cur);
   const next = choices[Math.min(choices.length - 1, Math.max(0, idx + delta))];
+  if (next === cur) return;
   state._bars[kind] = next;
   syncFormFromState();
+  runPlan();
 }
 
-function swapSectionBars(a, b) {
-  // 拖动可省略段（引子/收束）交换其小节配置，保持固定段落顺序
-  const tmp = state._bars[a];
-  state._bars[a] = state._bars[b];
-  state._bars[b] = tmp;
+function dragSectionBars(from, to) {
+  // 拖动结构段：在保持引子→发展→回归→收束固定顺序的前提下，
+  // 把源段的小节配置移动到目标段（目标原配置顺延回源段），可省略段允许落到 0。
+  const removable = (k) => SECTION_META[k].removable;
+  const srcChoices = state.bar_ranges[from];
+  const dstChoices = state.bar_ranges[to];
+  const srcVal = state._bars[from];
+  const dstVal = state._bars[to];
+  const fit = (v, choices) => (choices.includes(v) ? v : choices[choices.length - 1]);
+  state._bars[to] = fit(srcVal, dstChoices);
+  // 不可省略段（发展/回归）不允许被拖成 0
+  state._bars[from] = removable(from) ? fit(dstVal, srcChoices)
+                                      : Math.max(...srcChoices.filter((v) => v > 0));
   syncFormFromState();
+  runPlan();
 }
 
 function renderEmphTable() {
@@ -238,11 +254,29 @@ function renderResult(r) {
   drawTempo(p.tempo_curve);
   renderVerification(r.verification);
   renderCandidates(p.candidates);
+  renderConstraints(r.constraints);
 
   // 音频
   audioEl.pause();
   audioEl.src = "data:audio/wav;base64," + r.wav_b64;
   $("playhead").style.display = "none";
+}
+
+function renderConstraints(c) {
+  if (!c) return;
+  const rows = Object.entries(c.rule_hits).map(([rule, n]) =>
+    `<tr><td>${rule}</td><td>${n}</td></tr>`).join("") ||
+    '<tr><td colspan="2">无规则命中（全部候选通过）</td></tr>';
+  $("rule_hits").querySelector("tbody").innerHTML = rows;
+  const conflict = (c.minimal_conflict_sets || []).map((s) =>
+    `<li>${s.rules.join(" + ")}：${s.rule_names.join("、")}</li>`).join("");
+  $("conflict_box").hidden = !c.minimal_conflict_sets?.length;
+  $("conflict_out").innerHTML = conflict || "无";
+  $("trace_meta").textContent = JSON.stringify({
+    candidate_count: c.candidate_count,
+    feasible_candidate_count: c.feasible_candidate_count,
+    rule_violations: c.rule_violations,
+  }, null, 2);
 }
 
 function drawTempo(curve) {

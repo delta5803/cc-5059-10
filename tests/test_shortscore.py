@@ -1,13 +1,18 @@
 """shortscore 单元测试：python -m unittest discover -s tests -v"""
 import json
 import os
+import sys
 import tempfile
 import unittest
 import wave
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from shortscore.model import BEATS_PER_BAR
-from shortscore.planner import (_dev_plan_shape, compare_strategies,
-                                plan_structure)
+from shortscore.planner import (_dev_plan_shape, _theme_counts,
+                                compare_strategies, plan_structure)
+from shortscore.constraints import (RULE_NAMES, check_candidate, check_spec,
+                                    diagnose, minimal_conflict_sets)
 from shortscore.renderer import render_wav
 from shortscore.timeline import Segment, TempoMap
 from shortscore.scoreio import write_musicxml, write_json_score
@@ -153,6 +158,104 @@ class ExportTests(unittest.TestCase):
                 payload = json.load(f)
             self.assertEqual(payload["constraints"]["total_bars"], plan.total_bars)
             self.assertGreater(len(payload["schedule"]), 30)
+
+
+class ConstraintModuleTests(unittest.TestCase):
+    def test_rule_names_cover_seven_documented_rules(self):
+        self.assertEqual(set(RULE_NAMES), {f"R{i}" for i in range(1, 8)})
+
+    def test_check_spec_agrees_with_planner_on_all_examples(self):
+        # 约束模块与 planner 的可行性结论必须一致（不允许伪报/瞒报）
+        for name in ("1_feasible.json", "2_must_change_tempo.json",
+                     "3_emphasis_conflict.json"):
+            raw = load(name)
+            report = check_spec(raw)
+            plan, _, _ = plan_structure(raw)
+            self.assertEqual(report.feasible, plan.feasible, name)
+            self.assertGreater(report.candidate_count, 0)
+
+    def test_planning_trace_covers_every_candidate_with_rule_evidence(self):
+        report = check_spec(load("1_feasible.json"))
+        self.assertEqual(len(report.trace), report.candidate_count)
+        for row in report.trace:
+            self.assertIn("bars", row)
+            self.assertIn("violated_rules", row)
+            self.assertIn("theme_counts_actual", row)
+            self.assertEqual(row["feasible"], not row["violations"])
+
+    def test_theme_counts_match_scheduler_phrases_including_remainder(self):
+        # 6 小节 = 1 整乐句 + 1 零头半乐句 = 2 个 A 陈述（旧实现漏数零头）
+        counts = _theme_counts({"intro": 0, "development": 4,
+                                "recap": 6, "coda": 0}, 4)
+        self.assertEqual(counts["A"], 3)   # 发展段 1 个 A + 回归 2 个 A
+        self.assertEqual(counts["B"], 1)
+        # 收束 2 小节纯 I-V-I 终止式，不计主题陈述
+        counts_coda = _theme_counts({"intro": 0, "development": 4,
+                                     "recap": 4, "coda": 2}, 4)
+        self.assertEqual(counts_coda["A"], 2)
+        # 零发展段不产生虚假乐句
+        self.assertEqual(_theme_counts({"development": 0}, 4),
+                         {"A": 0, "B": 0})
+
+    def test_development_always_contains_both_themes(self):
+        for bars in (4, 6, 8):
+            themes = {t for t, _ in _dev_plan_shape(bars, 4)}
+            self.assertEqual(themes, {"A", "B"})
+
+    def test_minimal_conflict_set_relax_then_restore(self):
+        raw = load("3_emphasis_conflict.json")
+        self.assertFalse(check_spec(raw).feasible)
+        conflicts = minimal_conflict_sets(raw)
+        self.assertTrue(conflicts)
+        # 根因是强调规则（R5）单点冲突
+        self.assertIn(["R5"], [c["rules"] for c in conflicts])
+        diag = diagnose(raw)
+        for chk in diag["restore_check"]["checks"]:
+            self.assertTrue(chk["feasible_when_relaxed"])
+            self.assertFalse(chk["feasible_after_restore"])
+            self.assertTrue(chk["restore_matches_baseline"])
+
+    def test_feasible_spec_has_empty_conflict_sets(self):
+        diag = diagnose(load("1_feasible.json"))
+        self.assertTrue(diag["feasible"])
+        self.assertEqual(diag["minimal_conflict_sets"], [])
+
+    def test_strict_duration_and_locked_climax_checked_per_candidate(self):
+        raw = load("1_feasible.json")
+        report = check_spec(raw)
+        feasible_trace = next(t for t in report.trace if t["feasible"])
+        self.assertNotIn("R3", feasible_trace["violated_rules"])
+        # R2 锁定高潮：可行候选不得命中 R2
+        self.assertNotIn("R2", feasible_trace["violated_rules"])
+
+    def test_material_check_rejects_phrase_overflow(self):
+        from shortscore.model import load_spec
+        from shortscore.constraints import check_materials
+        raw = load("1_feasible.json")
+        spec = load_spec(raw)
+        spec["materials"]["A"].melody[0].start = 999  # 超出 4 小节乐句边界
+        violations = check_materials(spec)
+        self.assertTrue(any(v.rule == "R2" for v in violations))
+
+
+class RendererCoverageTests(unittest.TestCase):
+    def test_every_section_start_is_independently_verified(self):
+        # 回归：旧实现用字典按 kind 聚合，多个 section_start 互相覆盖
+        raw = load("1_feasible.json")
+        plan, scheduled, tmap = plan_structure(raw)
+        n_sections = len({e["section"] for e in scheduled.structural
+                          if e["kind"] == "section_start"})
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "x.wav")
+            res = render_wav(plan.schedule, tmap, path,
+                             tail_policy=raw["tail_policy"],
+                             release_sec=raw["release_sec"],
+                             structural_events=scheduled.structural,
+                             emphases=raw["emphases"])
+        section_rows = [r for r in res.verification
+                        if r["check"].startswith("结构事件信号核验")]
+        self.assertEqual(len(section_rows), n_sections)
+        self.assertTrue(all(r["pass"] for r in section_rows))
 
 
 if __name__ == "__main__":

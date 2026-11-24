@@ -116,12 +116,15 @@ def _development_plan(bars: int, phrase_bars: int) -> list[tuple[str, str, int]]
     发展段至少包含两个对比乐句；偶数小节整乐句排列，末尾零头用半乐句消化，
     保证高潮永远落在发展段最后一个乐句的强拍而不是段首。
     """
+    if bars <= 0:
+        return []
     full = bars // phrase_bars
     rem = bars - full * phrase_bars
     plan: list[tuple[str, str, int]] = []
     if full >= 2:
+        # 前两个乐句固定 B 起、A 应答，保证任何发展段都含 B→A 两个对比主题
         plan.append(("B", "repeat", phrase_bars))
-        plan.append(("B", "sequence_up", phrase_bars))
+        plan.append(("A", "sequence_up", phrase_bars))
         for i in range(2, full):
             plan.append(("A" if i % 2 else "B",
                          "sequence_down" if i % 2 else "octave_up", phrase_bars))

@@ -16,5 +16,5 @@
     {"time": 6.6,  "role": "theme_return", "tolerance": 0.6, "label": "卡点B（要求紧跟A仅1.6秒）"},
     {"time": 23.0, "role": "section_start:coda", "tolerance": 1.2, "label": "尾板"}
   ],
-  "recurrence": {"A": [1, 4], "B": [1, 2]}
+  "recurrence": {"A": [2, 5], "B": [1, 2]}
 }

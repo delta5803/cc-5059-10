@@ -212,20 +212,22 @@ def verify_render(wav_path: str, schedule: list[dict], tmap, tail_policy: str,
                   f"{'计入' if tail_policy == 'include_release' else '不计入'}尾音释放",
     })
 
-    # 2) 结构事件：段起点要求窗口内有真实持续信号；高潮/回归要求能量峰
-    by_beat = {e["kind"]: e["beat"] for e in structural_events}
-    for kind, beat in by_beat.items():
-        t = tmap.time_at_beat(beat)
+    # 2) 结构事件：每个段起点要求窗口内有真实持续信号（多个 section_start 各自独立核验，
+    #    不能用字典按 kind 聚合，否则后写的段落会覆盖前面的段落）；高潮/回归要求能量峰
+    for ev in structural_events:
+        kind = ev["kind"]
+        t = tmap.time_at_beat(ev["beat"])
         rms = _rms_window(samples, int(t * sr), half)
         if kind == "section_start":
-            # 段起点（如柔和引子）未必有攻击峰，只核验该时刻确实存在信号而非静音
+            section = ev.get("section", "")
             gate = 0.008
             rows.append({
-                "check": f"结构事件信号核验：{kind}",
+                "check": f"结构事件信号核验：section_start:{section}",
                 "measured_sec": round(t, 4),
                 "rms": round(rms, 5),
                 "pass": rms > gate,
-                "detail": f"事件时刻 ±60ms RMS={rms:.4f} 高于静音门限 {gate} 即视为真实发声",
+                "detail": f"段落 {section} 起点 ±60ms RMS={rms:.4f} "
+                          f"高于静音门限 {gate} 即视为真实发声",
             })
         else:
             rows.append({

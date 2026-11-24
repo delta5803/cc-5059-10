@@ -28,8 +28,29 @@ python -m shortscore.cli plan examples/1_feasible.json --outdir build/demo
 python -m shortscore.cli compare examples/2_must_change_tempo.json
 python -m shortscore.cli render examples/1_feasible.json build/demo/preview.wav
 python build_examples.py          # 重新生成全部样例交付物
+python validate_plan.py           # 曲式资料检查：规划轨迹/最小冲突集/渲染证据
 python -m unittest discover -s tests -v
 ```
+
+## 曲式资料检查（材料规则维护）
+
+`shortscore/constraints.py` 把下面 7 条核心约束编译成可运行检查（R1–R7），
+规划器、图形界面与 `validate_plan.py` 共用同一套规则，结论不允许分叉或伪报：
+
+| 规则 | 检查内容 |
+| --- | --- |
+| R1 | 乐句长度不得整除总小节（禁止整段循环退化） |
+| R2 | 发展/回归必备；发展段至少 B→A 两个对比乐句；高潮锁定发展段末乐句强拍 |
+| R3 | 严格时长由小节/节拍/速度曲线计算，速度缩放须在 `tempo_limits` 内 |
+| R4 | 主题复现次数（含零头半乐句，扣除收束 I–V–I 终止）落入区间 |
+| R5 | 强调时点绑定真实事件，落点在容差内且顺序不冲突 |
+| R6 | 尾音口径显式声明，交付长度与口径自洽 |
+| R7 | 收束段末尾固定 I–V–I 材料终止，禁止裁尾 |
+
+`python validate_plan.py` 对每个样例输出：逐候选**规划轨迹**、段落时长与主题采用
+证据、真实渲染 PCM 核验，以及不可行目标的**最小冲突集**（删除该规则后规格可满足、
+补回后恢复原结论）。诊断路径经实测选定：bar 网格仅 12–144 个组合，前向枚举 +
+全约束检查单次 < 3ms，故以材料约束可满足性前向检查为主，PCM 能量峰逆查仅作演奏级佐证。
 
 ## 核心约束（不可绕过）
 
@@ -51,9 +72,9 @@ python -m unittest discover -s tests -v
 
 | 样例 | 情形 | 结果 |
 | --- | --- | --- |
-| `examples/1_feasible.json` | 长度可行 | 17 小节（4+4+6+3，非整除），x1.05 速度，全部强调落入容差，渲染 45.00s |
-| `examples/2_must_change_tempo.json` | 必须改变速度 | 名义速度换乐段最短 43.63s 且触发整除/容差违规；改速度 x1.21 后 40.00s 可行 |
-| `examples/3_emphasis_conflict.json` | 无法同时满足 | 两强调节点目标间距 1.6s，但所有候选结构最小可达间距约 4s，结构性不可解 |
+| `examples/1_feasible.json` | 长度可行 | 17 小节（4+4+6+3，非整除），x1.05 速度，全部强调落入容差，渲染 45.00s；主题采用 A=5/B=1（含零头半乐句） |
+| `examples/2_must_change_tempo.json` | 必须改变速度 | 名义速度换乐段最短 43.63s 且触发整除/容差违规；改速度 x1.21 后 40.00s 可行，发展段为 B→A 对比乐句 |
+| `examples/3_emphasis_conflict.json` | 无法同时满足 | 两强调节点目标间距 1.6s，但所有候选结构最小可达间距约 4s，最小冲突集 = R5（强调规则），结构性不可解 |
 
 每个样例在 `build/<名称>/` 下产出：
 

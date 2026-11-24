@@ -46,12 +46,15 @@ def _segments_for(bars: dict[str, int], tempo_bpm: dict[str, float]) -> list[Seg
 
 def _dev_plan_shape(bars: int, phrase_bars: int) -> list[tuple[str, int]]:
     """与 scheduler._development_plan 保持一致的 (主题, 乐句小节数) 形状。"""
+    if bars <= 0:
+        return []
     full = bars // phrase_bars
     rem = bars - full * phrase_bars
     shape: list[tuple[str, int]] = []
     if full >= 2:
+        # 与 scheduler._development_plan 同构：前两个乐句固定 B 起、A 应答
         shape.append(("B", phrase_bars))
-        shape.append(("B", phrase_bars))
+        shape.append(("A", phrase_bars))
         for i in range(2, full):
             shape.append(("A" if i % 2 else "B", phrase_bars))
         if rem > 0:
@@ -63,13 +66,27 @@ def _dev_plan_shape(bars: int, phrase_bars: int) -> list[tuple[str, int]]:
     return shape
 
 
+def _phrase_count(n_bars: int, phrase_bars: int) -> int:
+    """scheduler 口径下 n_bars 小节里的主题乐句数：整乐句 + 零头半乐句各算一个陈述。"""
+    if n_bars <= 0:
+        return 0
+    full, rem = divmod(n_bars, phrase_bars)
+    return full + (1 if rem else 0)
+
+
 def _theme_counts(bars: dict[str, int], phrase_bars: int) -> dict[str, int]:
-    intro = bars.get("intro", 0) // phrase_bars
+    """与 scheduler.build_schedule 完全同口径的主题陈述计数。
+
+    零头小节会被调度成半乐句材料陈述（必须计入）；收束段末尾 2 小节是
+    I–V–I 终止式而非主题材料（不计入）。
+    """
+    intro = _phrase_count(bars.get("intro", 0), phrase_bars)
     dev_shape = _dev_plan_shape(bars.get("development", 0), phrase_bars)
     dev_a = sum(1 for t, _ in dev_shape if t == "A")
     dev_b = sum(1 for t, _ in dev_shape if t == "B")
-    recap = bars.get("recap", 0) // phrase_bars
-    coda = bars.get("coda", 0) // phrase_bars
+    recap = _phrase_count(bars.get("recap", 0), phrase_bars)
+    coda_body = max(0, bars.get("coda", 0) - 2)
+    coda = _phrase_count(coda_body, phrase_bars)
     return {"A": intro + dev_a + recap + coda, "B": dev_b}
 
 
@@ -211,11 +228,12 @@ def _build_plan(cand: Candidate, spec: dict, strategy: str,
                                       bpm_start=seg.bpm_start, bpm_end=seg.bpm_end))
         cursor_beat += seg.beats
     scheduled = build_schedule(sections, spec["materials"], spec["phrase_bars"])
+    # 段落级主题陈述数：直接采用与 scheduler 同口径的乐句计数，而不是数旋律音符
+    section_bars = {sc.kind: sc.bars for sc in sections}
     for sc in sections:
-        sc.statements = {
-            t: sum(1 for ev in scheduled.events
-                   if ev.section == sc.kind and ev.voice == "melody")
-            for t in ("A", "B")}
+        single = {k: section_bars.get(k, 0) if k == sc.kind else 0
+                  for k in CANONICAL_ORDER}
+        sc.statements = _theme_counts(single, spec["phrase_bars"])
     tmap = cand.tempo_map
     plan = Plan(
         sections=sections,

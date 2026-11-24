@@ -1,5 +1,5 @@
 {
-  "title": "样例1-可行：45秒品牌短配乐（19小节，非整除）",
+  "title": "样例1-可行：45秒品牌短配乐（17小节，非整除）",
   "target_sec": 45.0,
   "phrase_bars": 4,
   "tail_policy": "include_release",
@@ -17,5 +17,5 @@
     {"time": 21.5, "role": "theme_return",        "tolerance": 0.9, "label": "品牌主题回归"},
     {"time": 36.0, "role": "section_start:coda",  "tolerance": 1.0, "label": "收束入尾板"}
   ],
-  "recurrence": {"A": [2, 4], "B": [1, 2]}
+  "recurrence": {"A": [3, 5], "B": [1, 2]}
 }

@@ -44,10 +44,10 @@
       <label class="chk"><input id="ritardando" type="checkbox" checked> 末段渐慢</label>
     </div>
 
-    <h3>段落（拖动排序；± 调整小节数；0 = 省略）</h3>
+    <h3>段落（拖动结构段重分配小节；± 调整小节数；0 = 省略）</h3>
     <ul id="section_list" class="section-list"></ul>
-    <p class="hint">顺序固定为 引子→发展→回归→收束；仅允许在允许范围内调整各段小节数与省略引子/收束，
-      发展与回归不可省略。</p>
+    <p class="hint">顺序固定为 引子→发展→回归→收束；拖动段落卡片可在固定顺序内把小节配置移动到目标段，
+      ± 在该段网格内切换小节数；发展与回归不可省略，引子/收束可设为 0。</p>
 
     <h3>强调时点（容差单位：秒）</h3>
     <table id="emph_table" class="emph">
@@ -97,6 +97,18 @@
     <table id="verify_table" class="emph"><tbody></tbody></table>
     <h3>候选结构排序（前 8）</h3>
     <table id="cand_table" class="emph"><tbody></tbody></table>
+    <h3>材料规则命中（R1–R7，约束检查与校验脚本同源）</h3>
+    <table id="rule_hits" class="emph">
+      <thead><tr><th>规则</th><th>全部候选命中次数</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="conflict_box" hidden>
+      <h3>不可行诊断：最小冲突集（删规则可满足，补回恢复不可行）</h3>
+      <ul id="conflict_out" class="emph"></ul>
+    </div>
+    <details><summary>规划轨迹（逐候选规则检查证据）</summary>
+      <pre id="trace_meta"></pre>
+    </details>
     <div id="compare_box" hidden>
       <h3>策略对比</h3>
       <pre id="compare_out"></pre>

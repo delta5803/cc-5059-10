@@ -14,6 +14,7 @@ import tempfile
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from .constraints import check_spec, diagnose
 from .planner import compare_strategies, plan_structure
 from .renderer import render_wav
 from .scoreio import write_json_score, write_musicxml
@@ -31,6 +32,9 @@ _PRESETS = {
 
 def _plan_payload(spec: dict, strategy: str, ritardando: bool) -> dict:
     plan, scheduled, tmap = plan_structure(spec, strategy, ritardando)
+    # 规则级约束诊断（R1–R7）与逐候选规划轨迹，与校验脚本同源
+    constraint_report = check_spec(spec, strategy)
+    diagnosis = diagnose(spec, strategy)
     with tempfile.TemporaryDirectory() as tmp:
         wav_path = os.path.join(tmp, "preview.wav")
         result = render_wav(
@@ -74,6 +78,17 @@ def _plan_payload(spec: dict, strategy: str, ritardando: bool) -> dict:
             "candidates": plan.comparison["candidates_ranked"],
         },
         "verification": result.verification,
+        "constraints": {
+            "feasible": constraint_report.feasible,
+            "rule_hits": {k: v for k, v in constraint_report.rule_hits.items() if v},
+            "candidate_count": constraint_report.candidate_count,
+            "feasible_candidate_count": constraint_report.feasible_candidate_count,
+            "rule_violations": [
+                {"rule": v.rule, "message": v.message, "evidence": v.evidence}
+                for v in constraint_report.violations],
+            "minimal_conflict_sets": diagnosis["minimal_conflict_sets"],
+            "planning_trace": constraint_report.trace,
+        },
         "render": {"rendered_sec": round(result.rendered_sec, 3),
                    "sample_rate": result.sample_rate, "peak": round(result.peak, 3)},
         "wav_b64": __import__("base64").b64encode(buf.getvalue()).decode("ascii"),
